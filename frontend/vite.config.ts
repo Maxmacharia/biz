@@ -25,7 +25,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\./i,
+            urlPattern: /^https:\/\/.*\.onrender\.com\/api\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -42,9 +42,16 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // This proxy ONLY applies to local `npm run dev` / Docker dev compose.
+    // It is never used in a Vercel build — Vercel serves the static `dist/`
+    // output and the app talks directly to VITE_API_URL instead.
     proxy: {
       '/api': { target: 'http://backend:8000', changeOrigin: true },
       '/ws': { target: 'ws://backend:8000', ws: true },
     },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
   },
 })
