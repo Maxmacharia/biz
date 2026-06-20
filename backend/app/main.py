@@ -13,6 +13,10 @@ from app.api.v1.endpoints.websocket import ws_router
 async def lifespan(app: FastAPI):
     # Startup
     async with engine.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"))
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+
         await conn.run_sync(Base.metadata.create_all)
     yield
     # Shutdown
