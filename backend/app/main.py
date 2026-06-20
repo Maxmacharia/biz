@@ -2,9 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
+from sqlalchemy import text  # <-- 1. Added text import
+from sqlalchemy.ext.asyncio import AsyncSession  # <-- 2. Added AsyncSession import
 
 from app.core.config import settings
 from app.core.database import engine, Base
+from app.core.seed import import_demo_data  # <-- 3. Import your seed function
 from app.api.v1.router import api_router
 from app.api.v1.endpoints.websocket import ws_router
 
@@ -13,11 +16,18 @@ from app.api.v1.endpoints.websocket import ws_router
 async def lifespan(app: FastAPI):
     # Startup
     async with engine.begin() as conn:
+        # Run extensions first
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"))
+        await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
 
+        # Build tables
         await conn.run_sync(Base.metadata.create_all)
+    
+    # 4. Open a session to run the data seeding script safely
+    async with AsyncSession(engine) as session:
+        await import_demo_data(session)
+
     yield
     # Shutdown
     await engine.dispose()
